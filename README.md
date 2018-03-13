@@ -5,7 +5,7 @@ Laboratory works OpenGL
 
 ### Установка системных библиотек:
 ```bash
-apt install libgl1-mesa-dev libxrande-dev libxinerama-dev libxcursor-dev libxi-dev
+apt install libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 ```
 
 ### Установка дополнителльных библиотек:
