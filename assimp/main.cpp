@@ -103,7 +103,6 @@ int main() {
         trexModel = glm::scale(trexModel, glm::vec3(0.2f));
         shader.setMat4("model", trexModel);
 
-        glm::vec3 lightColor(1.0f);
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("light.position", lightPos);
         shader.setVec3("light.ambient", glm::vec3(0.1f));
