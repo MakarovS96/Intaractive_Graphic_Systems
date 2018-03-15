@@ -21,6 +21,7 @@ void processInput(GLFWwindow *window);
 unsigned char * fromHeight2Normal(unsigned char *textureData, int width, int height, int nrChannels, float scale = 3.0);
 unsigned int load_texture(GLuint texture_num, char *texture_path, bool isHeight2Norm = false);
 void animate();
+void renderQuad();
 
 int screenW = 800, screenH = 600;
 
@@ -60,19 +61,8 @@ int main() {
     glfwSetScrollCallback(window, scroll_callback);
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    glEnable(GL_TEXTURE_2D);
-    glEnableClientState(GL_NORMAL_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    //Load shaders
-    Shader shaderTerx("shaders/trex.v.glsl", "shaders/trex.f.glsl");
-    if(shaderTerx.getID() == GL_FALSE) {
-        glfwTerminate();
-        return -1;
-    }
+
 
     Shader shaderCylinder("shaders/cylinder.v.glsl", "shaders/cylinder.f.glsl");
     if(shaderCylinder.getID() == GL_FALSE) {
@@ -86,15 +76,12 @@ int main() {
         return -1;
     }
 
-    Model lightSphere("model/sphere.obj");
-    Model cylinder("model/cylinder.obj");
-
     //stbi_set_flip_vertically_on_load(true);
-    GLuint cylinder_tex = load_texture(0, "model/rockwall.tga");
+    GLuint cylinder_tex = load_texture(0, "model/bricks2.jpg");
 
-    GLuint cylinder_hight = load_texture(1, "model/rockwall_height.tga");
+    GLuint cylinder_hight = load_texture(1, "model/bricks2_disp.jpg");
 
-    GLuint cylinder_hight2norm = load_texture(2, "model/rockwall_height.tga", true);
+    GLuint cylinder_norm = load_texture(2, "model/bricks2_normal.jpg");
 
     //Main draw cicle
 	while (!glfwWindowShouldClose(window)) {
@@ -112,38 +99,22 @@ int main() {
         glm::mat4 view;
         view = camera.GetViewMatrix();
 
-        shaderTerx.use();
-        shaderTerx.setMat4("view", view);
-        shaderTerx.setMat4("projection", projection);
-        glm::mat4 trexModel;
-        trexModel = glm::translate(trexModel, glm::vec3(3.0f, 0.0f, 3.0f));
-        trexModel = glm::scale(trexModel, glm::vec3(0.4f));
-        shaderTerx.setMat4("model", trexModel);
-
         shaderCylinder.use();
         shaderCylinder.setMat4("view", view);
         shaderCylinder.setMat4("projection", projection);
         glm::mat4 cylinderModel;
         shaderCylinder.setMat4("model", cylinderModel);
+
         shaderCylinder.setVec3("lightPos", lightPos);
         shaderCylinder.setVec3("viewPos", camera.Position);
+
         shaderCylinder.setInt("diffuseMap", 0);
         shaderCylinder.setInt("depthMap", 1);
         shaderCylinder.setInt("normalMap", 2);
+
         shaderCylinder.setFloat("heightScale", 0.1f);
-        cylinder.Draw();
 
-
-
-        lightShader.use();
-        lightShader.setMat4("view", view);
-        lightShader.setMat4("projection", projection);
-        glm::mat4 lightModel;
-        lightModel = glm::translate(lightModel, lightPos);
-        lightModel = glm::scale(lightModel, glm::vec3(0.1f));
-        lightShader.setMat4("model", lightModel);
-        lightSphere.Draw();
-
+        renderQuad();
         animate();
 
 		glfwSwapBuffers(window);
@@ -278,4 +249,98 @@ unsigned int load_texture(GLuint texture_num, char *texture_path, bool isHeight2
     }
 
     return textureID;
+}
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        // positions
+        glm::vec3 pos1(-1.0f,  1.0f, 0.0f);
+        glm::vec3 pos2(-1.0f, -1.0f, 0.0f);
+        glm::vec3 pos3( 1.0f, -1.0f, 0.0f);
+        glm::vec3 pos4( 1.0f,  1.0f, 0.0f);
+        // texture coordinates
+        glm::vec2 uv1(0.0f, 1.0f);
+        glm::vec2 uv2(0.0f, 0.0f);
+        glm::vec2 uv3(1.0f, 0.0f);
+        glm::vec2 uv4(1.0f, 1.0f);
+        // normal vector
+        glm::vec3 nm(0.0f, 0.0f, 1.0f);
+
+        // calculate tangent/bitangent vectors of both triangles
+        glm::vec3 tangent1, bitangent1;
+        glm::vec3 tangent2, bitangent2;
+        // triangle 1
+        // ----------
+        glm::vec3 edge1 = pos2 - pos1;
+        glm::vec3 edge2 = pos3 - pos1;
+        glm::vec2 deltaUV1 = uv2 - uv1;
+        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+        tangent1 = glm::normalize(tangent1);
+
+        bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+        bitangent1 = glm::normalize(bitangent1);
+
+        // triangle 2
+        // ----------
+        edge1 = pos3 - pos1;
+        edge2 = pos4 - pos1;
+        deltaUV1 = uv3 - uv1;
+        deltaUV2 = uv4 - uv1;
+
+        f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+        tangent2 = glm::normalize(tangent2);
+
+
+        bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+        bitangent2 = glm::normalize(bitangent2);
+
+
+        float quadVertices[] = {
+                // positions            // normal         // texcoords  // tangent                          // bitangent
+                pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+                pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+                pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+                pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+                pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+                pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
+        };
+        // configure plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
 }

@@ -15,7 +15,7 @@ uniform sampler2D depthMap;
 uniform float heightScale;
 
 vec2 parallaxMapping(in vec3 V, in vec2 T, out float parallaxHeight) {
-    float minLayers = 200 * abs(heightScale);
+    float minLayers = 300 * abs(heightScale);
     float maxLayers = 500 * abs(heightScale);
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), V)));
     float layerHeight = 1.0 / numLayers;
