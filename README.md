@@ -13,7 +13,7 @@ apt install libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-d
 2. скачать исходники [glfw](http://www.glfw.org/download.html), скомпилить и установить;
 3. скачать исходники [glm](https://github.com/g-truc/glm/releases/tag/0.9.8.5), скомпилить и установить.
 4. скачать [assimp](https://sourceforge.net/projects/assimp/files/assimp-3.1/), скомпилить и установить. Основные ошибки при сборке Assimp (актуально для Windows):
-    - CMake выдает ошибки о отсутствующих библиотеках DiretX, такие как:
+    - CMake выдает ошибки о отсутствующих библиотеках DirectX, такие как:
     ```
     Could not locate DirectX
     CMake Error at cmake-modules/FindPkgMacros.cmake:110 (message):
